@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MotoSerwis PRO</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eef1f5;color:#202938;font:16px Arial}
+header{background:#17283e;color:white;padding:20px}
+header h1{margin:0;font-size:24px}
+nav{display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:#fff}
+button{border:0;border-radius:8px;padding:12px;background:#1769aa;color:white;font-weight:bold;cursor:pointer}
+nav button{background:#e3edf7;color:#17466d}
+main{padding:14px;max-width:850px;margin:auto}
+.card{background:white;border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 2px 8px #0001}
+input,select,textarea{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ccd3dc;border-radius:7px;font-size:16px}
+label{font-weight:bold}
+h2{font-size:20px}
+table{width:100%;border-collapse:collapse;margin:10px 0}
+td,th{padding:9px;border-bottom:1px solid #ddd;text-align:left}
+.total{font-size:22px;font-weight:bold;text-align:right}
+.small{color:#667085;font-size:13px}
+.item{border-bottom:1px solid #ddd;padding:10px 0}
+@media print{header,nav,.no-print{display:none!important}body{background:white}.card{box-shadow:none}}
+</style>
+</head>
+<body>
+<header>
+<h1>🔧 MotoSerwis PRO</h1>
+<p>Sprzedaż części i usług warsztatowych</p>
+</header>
+<nav>
+<button onclick="show('home')">Start</button>
+<button onclick="show('customers')">Klienci</button>
+<button onclick="show('stock')">Magazyn</button>
+<button onclick="show('services')">Usługi</button>
+<button onclick="show('sale')">Nowy dokument</button>
+<button onclick="show('history')">Dokumenty</button>
+</nav>
+<main id="app"></main>
+<script>
+const get=(k,d)=>JSON.parse(localStorage.getItem(k)||JSON.stringify(d));
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+let customers=get('customers',['Jan Kowalski','Anna Nowak']);
+let stock=get('stock',[{name:'Filtr oleju',price:35,qty:12},{name:'Olej silnikowy 5W30',price:120,qty:8},{name:'Klocki hamulcowe',price:145,qty:5}]);
+let services=get('services',[{name:'Wymiana oleju',price:100},{name:'Wymiana klocków',price:180},{name:'Diagnostyka komputerowa',price:120}]);
+let docs=get('docs',[]);
+let cart=[];
+const money=n=>Number(n).toFixed(2)+' zł';
+function show(page){
+let a=document.getElementById('app');
+if(page==='home')a.innerHTML=`<div class="card"><h2>Panel główny</h2><p>Witaj w MotoSerwis PRO!</p><p>Klienci: ${customers.length}</p><p>Pozycje magazynowe: ${stock.length}</p><p>Wystawione dokumenty: ${docs.length}</p><button onclick="show('sale')">＋ Utwórz dokument sprzedaży</button></div>`;
+if(page==='customers')a.innerHTML=`<div class="card"><h2>Klienci</h2><input id="newCustomer" placeholder="Imię i nazwisko klienta"><button onclick="addCustomer()">Dodaj klienta</button>${customers.map(c=>`<div class="item">${esc(c)}</div>`).join('')}</div>`;
+if(page==='stock')a.innerHTML=`<div class="card"><h2>Magazyn części</h2><label>Nazwa części</label><input id="partName" placeholder="Nazwa"><label>Cena zł</label><input id="partPrice" type="number" step=".01" placeholder="Cena"><label>Ilość</label><input id="partQty" type="number" placeholder="Ilość"><button onclick="addPart()">Dodaj do magazynu</button>${stock.map((p,i)=>`<div class="item">${esc(p.name)} | ${money(p.price)} | Stan: ${p.qty} <button onclick="delPart(${i})">Usuń</button></div>`).join('')}</div>`;
+if(page==='services')a.innerHTML=`<div class="card"><h2>Usługi</h2><label>Nazwa usługi</label><input id="serviceName" placeholder="Nazwa"><label>Cena zł</label><input id="servicePrice" type="number" step=".01" placeholder="Cena"><button onclick="addService()">Dodaj usługę</button>${services.map((s,i)=>`<div class="item">${esc(s.name)} | ${money(s.price)} <button onclick="delService(${i})">Usuń</button></div>`).join('')}</div>`;
+if(page==='sale')salePage();
+if(page==='history')a.innerHTML=`<div class="card"><h2>Dokumenty sprzedaży</h2>${docs.length?docs.slice().reverse().map(d=>`<div class="item"><b>${esc(d.number)}</b> · ${esc(d.customer)} · ${esc(d.date)}<br>${money(d.total)} <button onclick="printDoc(${docs.indexOf(d)})">Drukuj</button></div>`).join(''):'Brak dokumentów.'}</div>`;
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function addCustomer(){let v=document.getElementById('newCustomer').value.trim();if(v){customers.push(v);save('customers',customers);show('customers')}}
+function addPart(){let n=partName.value.trim(),p=Number(partPrice.value),q=Number(partQty.value);if(n&&p>=0&&q>=0){stock.push({name:n,price:p,qty:q});save('stock',stock);show('stock')}}
+function delPart(i){stock.splice(i,1);save('stock',stock);show('stock')}
+function addService(){let n=serviceName.value.trim(),p=Number(servicePrice.value);if(n&&p>=0){services.push({name:n,price:p});save('services',services);show('services')}}
+function delService(i){services.splice(i,1);save('services',services);show('services')}
+function salePage(){
+cart=[];
+document.getElementById('app').innerHTML=`<div class="card"><h2>Nowy dokument sprzedaży</h2><label>Klient</label><select id="client">${customers.map(c=>`<option>${esc(c)}</option>`).join('')}</select><label>Numer rejestracyjny / pojazd</label><input id="vehicle" placeholder="Np. KR 12345, Opel Astra"><label>Dodaj część lub usługę</label><select id="product">${[...stock.map((p,i)=>({name:p.name,price:p.price,type:'part',index:i})),...services.map((s,i)=>({name:s.name,price:s.price,type:'service',index:i}))].map(p=>`<option value="${p.type}:${p.index}">${esc(p.name)} · ${money(p.price)}</option>`).join('')}</select><label>Ilość</label><input id="amount" type="number" min="1" value="1"><button onclick="addToCart()">Dodaj pozycję</button><div id="cart"></div><label>Uwagi</label><textarea id="notes" placeholder="Dodatkowe informacje"></textarea><button onclick="createDoc()">Zapisz dokument</button></div>`;
+renderCart();
+}
+function addToCart(){let [type,i]=product.value.split(':');let p=type==='part'?stock[+i]:services[+i];if(!p)return;let q=Math.max(1,Number(amount.value)||1);cart.push({name:p.name,price:p.price,qty:q,type});renderCart()}
+function renderCart(){let el=document.getElementById('cart');if(!el)return;let total=cart.reduce((s,x)=>s+x.price*x.qty,0);el.innerHTML=`<h3>Pozycje dokumentu</h3>${cart.map((x,i)=>`<div class="item">${esc(x.name)} · ${x.qty} × ${money(x.price)} <button onclick="cart.splice(${i},1);renderCart()">Usuń</button></div>`).join('')}<p class="total">Razem: ${money(total)}</p>`}
+function createDoc(){if(!cart.length){alert('Dodaj przynajmniej jedną pozycję.');return}let total=cart.reduce((s,x)=>s+x.price*x.qty,0);let d={number:'MS/'+(docs.length+1)+'/'+new Date().getFullYear(),customer:client.value,vehicle:vehicle.value,date:new Date().toLocaleDateString('pl-PL'),notes:notes.value,items:cart,total};docs.push(d);save('docs',docs);show('history')}
+function printDoc(i){let d=docs[i],w=window.open('','_blank');w.document.write(`<html><meta charset="utf-8"><title>Dokument ${esc(d.number)}</title><body style="font:16px Arial;padding:25px"><h1>MotoSerwis PRO</h1><h2>Dokument sprzedaży</h2><p>Numer: ${esc(d.number)}<br>Data: ${esc(d.date)}<br>Klient: ${esc(d.customer)}<br>Pojazd: ${esc(d.vehicle||'')}</p><table border="1" cellpadding="8" cellspacing="0" width="100%"><tr><th>Pozycja</th><th>Ilość</th><th>Cena</th><th>Wartość</th></tr>${d.items.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.qty}</td><td>${money(x.price)}</td><td>${money(x.price*x.qty)}</td></tr>`).join('')}</table><h2 style="text-align:right">Razem: ${money(d.total)}</h2><p>Uwagi: ${esc(d.notes||'')}</p><p class="small">Dokument warsztatowy, nie jest fakturą VAT ani paragonem fiskalnym.</p><script>window.print()<\/script></body></html>`);w.document.close()}
+show('home');
+</script>
+</body>
+</html>
